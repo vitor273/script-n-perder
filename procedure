@@ -1,0 +1,112 @@
+>>> PROCEDURES
+Uma procedure em SQL é um conjunto de instruções SQL salvas e armazenadas no banco de dados para serem executadas como um único bloco de código. Elas são usadas para realizar tarefas comuns de banco de dados, automatizar operações complexas e melhorar a eficiência, segurança e reutilização do código. 
+
+>>> SET NOCOUNT ON - Nativamente (está OFF), sempre que executa uma consulta, o SQL Server retorna uma mensagem como esta no painel "Messages" (Mensagens) do SQL Server Management Studio (SSMS):
+
+(1 row(s) affected)
+
+ou
+
+(50 row(s) affected)
+
+Quando define SET NOCOUNT ON, estas mensagens deixam de ser enviadas.
+- Melhorar o Desempenho (Performance)
+- "Limpar" a Saída
+
+>>> CAST - O comando CAST é uma função essencial usada para converter (ou "moldar") um valor de um tipo de dado para outro.
+- Para Fazer Cálculos
+- Para Juntar (Concatenar) Dados
+- Para Formatar Datas
+
+>>> RETURN, em resumo, RETURN 0 é a forma convencional de terminar a execução de uma procedure e sinalizar que ela foi concluída com "Sucesso".
+
+========================================================================
+
+>>>>> Vendas Abertas
+CREATE PROCEDURE [dbo].[VendasAbertasDia]
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        Venda.Id,
+        Cliente.nome AS NomeCliente,
+        Venda.total
+    FROM
+        Venda
+    INNER JOIN
+        Cliente ON Venda.id_cliente = Cliente.Id
+    WHERE
+        Venda.situacao = 'Aberta'
+        AND
+        CAST(Venda.data_venda AS DATE) = CAST(GETDATE() AS DATE)
+    ORDER BY
+        Venda.data_venda DESC; 
+END
+
+>>>>> VendaId
+CREATE PROCEDURE [dbo].[VendaId]
+	@Id int
+AS
+	SELECT * FROM Venda WHERE Id = @Id
+RETURN 0
+
+>>>>> TotalFechadoDia
+CREATE PROCEDURE [dbo].[TotalFechadoDia]
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        ISNULL(SUM(Venda.total), 0) AS TotalVendidoHoje
+    FROM
+        Venda
+    WHERE
+        Venda.situacao = 'Fechada'
+        AND
+        CAST(Venda.data_venda AS DATE) = CAST(GETDATE() AS DATE);
+END
+
+>>>>> Quantidade_Produto
+CREATE PROCEDURE [dbo].[Quantidade_Produto]
+	@Id int
+AS
+	SELECT quantidade from Produto WHERE Id = @Id
+RETURN 0
+
+>>>>> LocalizarVendido
+CREATE PROCEDURE [dbo].[LocalizarVendido]
+	@Id int
+AS
+	SELECT Venda.*, Itens_Venda.*, Cliente.Id, Cliente.nome as nomecliente, Produto.Id, Produto.nome as nomeproduto FROM Venda INNER JOIN Itens_Venda ON Venda.Id = Itens_Venda.id_venda INNER JOIN Cliente ON Venda.id_cliente = Cliente.Id INNER JOIN Produto ON Itens_Venda.id_produto = Produto.Id WHERE Venda.Id = @Id
+RETURN 0
+
+>>>>> InserirVenda
+CREATE PROCEDURE [dbo].[InserirVenda]
+	@id_cliente nchar(10),
+	@total decimal(18,2),
+	@data_venda date,
+	@situacao nchar(10)
+AS
+	INSERT INTO Venda(id_cliente, total, data_venda, situacao) VALUES (@id_cliente, @total, @data_venda, @situacao)
+RETURN 0
+
+>>>>> InserirItensVendidos
+CREATE PROCEDURE [dbo].[InserirItensVendidos]
+	@id_venda int,
+	@id_produto int,
+	@quantidade int,
+	@preco decimal(18,2),
+	@subtotal decimal(18,2)
+AS
+	INSERT INTO Itens_Venda(id_venda, id_produto, quantidade, preco, subtotal) VALUES (@id_venda, @id_produto, @quantidade, @preco, @subtotal)
+RETURN 0
+
+>>>>> AtualizaEstoqueVenda
+CREATE PROCEDURE [dbo].[AtualizaEstoqueVenda]
+	@id_produto int,
+	@quantidade int
+AS
+	SET NOCOUNT ON;
+	UPDATE Produto SET quantidade = quantidade - @quantidade WHERE Id = @id_produto;
+RETURN 0
