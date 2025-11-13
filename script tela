@@ -1,0 +1,187 @@
+using Microsoft.Data.SqlClient;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Data.SqlClient;
+using System.Drawing;
+using System.Globalization;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace OBoteco
+{
+    public partial class frmPrincipal : Form
+    {
+        public frmPrincipal()
+        {
+            InitializeComponent();
+        }
+        private void AtualizarDashboard()
+        {
+            AtualizarTotalDia();
+            AtualizarVendasAbertas();
+        }
+
+        private void AtualizarTotalDia()
+        {
+            string connectionString = "Data Source=(LocalDB)\\MSSQLLocalDB;AttachDbFilename=C:\\Programas\\OBoteco\\OBoteco\\DbBoteco.mdf;Integrated Security=True";
+            decimal totalVendido = 0;
+            try
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    using (SqlCommand cmd = new SqlCommand("TotalFechadoDia", con))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        con.Open();
+                        var resultado = cmd.ExecuteScalar();
+                        if (resultado != null && resultado != DBNull.Value)
+                        {
+                            totalVendido = Convert.ToDecimal(resultado);
+                        }
+                    }
+                }
+                lblTotalDia.Text = totalVendido.ToString("C2", CultureInfo.GetCultureInfo("pt-BR"));
+            }
+            catch (Exception ex)
+            {
+                lblTotalDia.Text = "Erro";
+            }
+        }
+
+        private void AtualizarVendasAbertas()
+        {
+            string connectionString = "Data Source=(LocalDB)\\MSSQLLocalDB;AttachDbFilename=C:\\Programas\\OBoteco\\OBoteco\\DbBoteco.mdf;Integrated Security=True";
+            lsvAbertas.BeginUpdate();
+            lsvAbertas.Items.Clear();
+            try
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    using (SqlCommand cmd = new SqlCommand("VendasAbertasDia", con))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        con.Open();
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                string idVenda = reader["Id"].ToString();
+                                string nomeCliente = reader["NomeCliente"].ToString();
+                                decimal valorTotal = Convert.ToDecimal(reader["total"]);
+                                ListViewItem item = new ListViewItem(idVenda);
+                                item.SubItems.Add(nomeCliente);
+                                item.SubItems.Add(valorTotal.ToString("C2", CultureInfo.GetCultureInfo("pt-BR")));
+                                item.Tag = (int)reader["Id"];
+                                lsvAbertas.Items.Add(item);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                lsvAbertas.EndUpdate();
+            }
+        }
+        private void sAIRToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var a = MessageBox.Show("Deseja realmente sair?", "Confirmação", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (a == DialogResult.Yes)
+            {
+                Environment.Exit(0);
+            }
+        }
+
+        private void vENDASToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            frmVenda venda = new frmVenda();
+            venda.Show();
+        }
+
+        private void cLIENTESToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            frmCliente cliente = new frmCliente();
+            cliente.Show();
+        }
+
+        private void fUNCIONÁRIOSToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            frmFuncionario funcionario = new frmFuncionario();
+            funcionario.Show();
+        }
+
+        private void pRODUTOSToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            frmProduto produto = new frmProduto();
+            produto.Show();
+        }
+
+        private void pbxSair_Click(object sender, EventArgs e)
+        {
+            var a = MessageBox.Show("Deseja realmente sair?", "Confirmação", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (a == DialogResult.Yes)
+            {
+                Environment.Exit(0);
+            }
+        }
+
+        private void pbxCliente_Click(object sender, EventArgs e)
+        {
+            frmCliente cliente = new frmCliente();
+            cliente.Show();
+        }
+
+        private void pbxFuncionario_Click(object sender, EventArgs e)
+        {
+            frmFuncionario funcionario = new frmFuncionario();
+            funcionario.Show();
+        }
+
+        private void pbxProduto_Click(object sender, EventArgs e)
+        {
+            frmProduto produto = new frmProduto();
+            produto.Show();
+        }
+
+        private void pbxVenda_Click(object sender, EventArgs e)
+        {
+            frmVenda venda = new frmVenda();
+            venda.Show();
+        }
+
+        private void frmPrincipal_Load(object sender, EventArgs e)
+        {
+            AtualizarDashboard();
+        }
+
+        private void timerRefresh_Tick(object sender, EventArgs e)
+        {
+            AtualizarDashboard();
+        }
+
+        private void lsvAbertas_ItemActivate(object sender, EventArgs e)
+        {
+            if (lsvAbertas.SelectedItems.Count > 0)
+            {
+                ListViewItem itemSelecionado = lsvAbertas.SelectedItems[0];
+                int idVendaParaAbrir = (int)itemSelecionado.Tag;
+                timerRefresh.Stop();
+                using (frmVenda formularioVenda = new frmVenda())
+                {
+                    formularioVenda.CarregarVenda(idVendaParaAbrir);
+                    formularioVenda.ShowDialog();
+                }
+                AtualizarDashboard();
+                timerRefresh.Start();
+            }
+        }
+    }
+}
